@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encrypt</title>
+</head>
+<body>
+    <script>
+        async function generateKey(password, salt, iterations, digest) {
+            let keyMaterial = await crypto.subtle.importKey(
+                'raw', new TextEncoder().encode(password),
+                {name: 'PBKDF2'}, false, ['deriveKey']
+            );
+            return crypto.subtle.deriveKey(
+                {name: 'PBKDF2', salt: salt, iterations: iterations, hash: digest},
+                keyMaterial,
+                {name: 'AES-GCM', length: 256},
+                false,
+                ['encrypt', 'decrypt']
+            );
+        }
+        async function decryptData(encrypted, iv, salt, password) {
+            let encryptedParts = JSON.parse(encrypted);
+            let decryptedArrayBuffer = await crypto.subtle.decrypt(
+                {name: 'AES-GCM', iv: iv},
+                await generateKey(password, salt, 100000, 'SHA-256'),
+                new Uint8Array(encryptedParts.ciphertext.map(b64 => Uint8Array.from(atob(b64), c => c.charCodeAt(0)))).buffer
+            );
+        
+            return new TextDecoder().decode(decryptedArrayBuffer);
+        }
+        async function encryptData(plainText, password) {
+            let salt = crypto.getRandomValues(new Uint8Array(16));
+            let iv = crypto.getRandomValues(new Uint8Array(12));
+            let key = await generateKey(password, salt, 100000, 'SHA-256');
+            let encrypted = await crypto.subtle.encrypt(
+                {name: 'AES-GCM', iv: iv},
+                key,
+                new TextEncoder().encode(plainText)
+            );
+            return {encrypted: encrypted, iv: iv, salt: salt};
+        }
+        async function buttonClick() {
+            let plainText = document.getElementById('html').value;
+            let password = document.getElementById('password').value;
+            let encrypted = await encryptData(plainText, password);
+        
+            let encryptedParts = {
+                salt: window.btoa(String.fromCharCode.apply(null, encrypted.salt)),
+                nonce: window.btoa(String.fromCharCode.apply(null, encrypted.iv)),
+                ciphertext: []
+            };
+        
+            for (let i = 0; i < encrypted.encrypted.byteLength; i += 1000) {
+                let chunk = encrypted.encrypted.slice(i, i + 1000);
+                encryptedParts.ciphertext.push(window.btoa(String.fromCharCode.apply(null, new Uint8Array(chunk))));
+            }
+            document.getElementById('encrypted').value = JSON.stringify(encryptedParts);
+        }
+    </script>
+<div>
+    <textarea id="html" cols="100" rows="20"></textarea><br>
+    <input type="text" id="password" placeholder="Enter password"><br>
+    <button onclick="buttonClick()">Encrypt</button><br>
+    <textarea id="encrypted" placeholder="" cols="100" rows="20"></textarea>
+</div>
+</body>
+</html>

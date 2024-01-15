@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        #decrypt_container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+        #decrypt_centered-content {
+            text-align: center;
+        }
+        #decrypt_password {
+            border: none;
+            border-bottom: 1px solid #518eff;
+            padding: 3px 3px;
+            margin-bottom: 10px;
+            width: 300px;
+            text-align: center;
+            font-size: 24px;
+        }
+        #decrypt_button {
+            border: none;
+            background-color: #518eff;
+            color: white;
+            padding: 10px 10px;
+            box-shadow: 0 0 5px #518eff;
+            font-size: 24px;
+        }
+    </style>
+<div id="decrypt_loading">
+    <p>Loading...</p>
+</div>
+    <script>
+        let data = {"salt":"lOaI7tegght/UDo2YDUpNg==","nonce":"5wK6ZTEIk5Gn8yit","ciphertext":"MWAINBeb00VxPn5yAKpb7GkzKc8g5g/oQ92h"}
+
+        async function generateKey(password, salt, iterations, digest) {
+            let keyMaterial = await crypto.subtle.importKey(
+                'raw', new TextEncoder().encode(password),
+                {name: 'PBKDF2'}, false, ['deriveKey']
+            );
+            return crypto.subtle.deriveKey(
+                {name: 'PBKDF2', salt: salt, iterations: iterations, hash: digest},
+                keyMaterial,
+                {name: 'AES-GCM', length: 256},
+                false,
+                ['encrypt', 'decrypt']
+            );
+        }
+        async function decryptData(encrypted, iv, salt, password) {
+            let encryptedParts = JSON.parse(encrypted);
+            encryptedParts.ciphertext = encryptedParts.ciphertext.replace(/-/g, '+').replace(/_/g, '/');
+        
+            let key = await generateKey(password, salt, 100000, 'SHA-256');
+            let decryptedArrayBuffer = await crypto.subtle.decrypt(
+                {name: 'AES-GCM', iv: iv},
+                key,
+                (new TextEncoder()).encode(atob(encryptedParts.ciphertext))
+            );
+        
+            return new TextDecoder().decode(decryptedArrayBuffer);
+        }
+        async function buttonClick() {
+            let password = document.getElementById('decrypt_password').value;
+            let salt____ = window.atob(data.salt);
+            let iv____ = window.atob(data.nonce);
+            let ciphertext____ = data.ciphertext.map(b64 => Uint8Array.from(atob(b64), c => c.charCodeAt(0)));
+            let salt_____ = new Uint8Array(salt____.split('').map(char => char.charCodeAt(0)));
+            let key__ = await generateKey(password, salt_____, 100000, 'SHA-256');
+        
+            let totalLength = ciphertext____.reduce((acc, cur) => acc + cur.length, 0);
+            let concatenatedCiphertext = new Uint8Array(totalLength);
+            
+            let offset = 0;
+            for (let part of ciphertext____) {
+                concatenatedCiphertext.set(part, offset);
+                offset += part.length;
+            }
+            
+            let decryptedArrayBuffer = await crypto.subtle.decrypt(
+                {name: 'AES-GCM', iv: new Uint8Array(iv____.split('').map(char => char.charCodeAt(0)))},
+                key__,
+                concatenatedCiphertext
+            );
+        
+            document.body.innerHTML = new TextDecoder().decode(decryptedArrayBuffer);
+        }
+        // on document ready, hide loading screen and show password input
+        document.addEventListener("DOMContentLoaded", function() {
+            document.getElementById("decrypt_loading").style.display = "none";
+        });
+    </script>
+
+<div id="decrypt_container">
+    <div id="decrypt_centered-content">
+        <input type="text" id="decrypt_password" placeholder="Enter password here" onkeydown="handleKeyDown(event)"><br>
+        <button id="decrypt_button" onclick="buttonClick()">Decrypt</button>
+    </div>
+</div>
+
+<script>
+function handleKeyDown(event) 
+{
+    if (event.keyCode === 13) {
+        event.preventDefault();
+        document.getElementById("decrypt_button").click();
+    }
+}
+</script>
+
+</body>
+</html>
