@@ -45,4 +45,6 @@ python encrypt.py embedded.html <your-password> encrypted.html
 Replace <your-html.html> and <your-password> with the appropriate values for your use case.
 After running the encrypt.py, press any key in the console to close the window.
 
-This tool allows you to securely encrypt an HTML file and require a password for access, ensuring that the content remains protected and not publicly accessible.
+This tool allows you to securely encrypt an HTML file and require a password for access, ensuring that the content remains protected and not publicly accessible. Be sure to pick a long enough password to ensure that it is secure, as a short password can be easily brute-forced.
+
+![](https://link.datatalk.app/1.png?url=https%3A%2F%2Fgithub.com%2Fdatatalkapp%2Fencrypt-html)
